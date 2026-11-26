@@ -66,6 +66,59 @@ body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sa
 .fb details summary { cursor: pointer; }
 .fb details p { white-space: pre-wrap; margin: 6px 0 0; line-height: 1.6; }
 .fb-foot ul { margin: 8px 0 0; padding-left: 1.2em; line-height: 1.7; font-size: 13px; color: var(--muted); }
+
+/* ── 手機優先排版：放大字級、加寬行距 ── */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { font-size: 17px; line-height: 1.7; }
+.fb { padding: 20px 16px 40px; gap: 24px; }
+.fb h1 { font-size: 26px; line-height: 1.4; }
+.fb h2 { font-size: 20px; line-height: 1.4; margin-bottom: 14px; }
+.fb-sub { font-size: 14.5px; line-height: 1.6; margin-top: 10px; }
+.fb-lead { margin-top: 20px; gap: 22px; }
+.fb-lead h3 { font-size: 18px; line-height: 1.45; margin-bottom: 8px; }
+.fb-lead p { font-size: 17px; line-height: 1.8; }
+.fb-lead p + p { margin-top: 10px; }
+.fb-callout { padding: 16px; }
+.fb-callout h3 { font-size: 20px; }
+.fb-callout p { font-size: 18px; line-height: 1.75; }
+.fb-card { padding: 16px; }
+.fb-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.fb-tiles .fb-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.fb-tile-label { font-size: 15px; }
+.fb-tile-num { font-size: 30px; line-height: 1.3; }
+.fb-tile-note { font-size: 14px; line-height: 1.5; }
+.fb-chart text { font-size: 13px; }
+.fb-tip { font-size: 14.5px; }
+.fb-legend { font-size: 15px; }
+.fb-sw { width: 12px; height: 12px; }
+.fb-note { font-size: 14.5px; line-height: 1.7; }
+.fb table { font-size: 16px; }
+.fb th { font-size: 14.5px; }
+.fb th, .fb td { padding: 10px 8px; }
+.fb-two { grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 24px; }
+.fb-bars { gap: 14px; }
+.fb-barrow { font-size: 16px; line-height: 1.5; }
+.fb-bartrack, .fb-barfill { height: 10px; border-radius: 5px; }
+.fb-bartrack { margin-top: 6px; }
+.fb-findings { font-size: 17px; line-height: 1.8; }
+.fb-findings li + li { margin-top: 14px; }
+.fb-sugg { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; }
+.fb-s-head { font-size: 14.5px; }
+.fb-s-q { font-size: 17.5px; line-height: 1.6; }
+.fb-s-tag { font-size: 14px; padding: 3px 10px; }
+.fb-s-sugg { font-size: 17px; line-height: 1.75; }
+.fb details { font-size: 15.5px; margin-top: 12px; }
+.fb details summary { padding: 6px 0; }
+.fb details p { line-height: 1.75; }
+.fb-foot ul { font-size: 15px; line-height: 1.8; }
+@media (min-width: 720px) {
+  .fb { padding: 40px 24px 56px; gap: 32px; }
+  .fb h1 { font-size: 32px; }
+  .fb-card { padding: 22px; }
+  .fb-callout { padding: 22px; }
+  .fb-tiles { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; }
+  .fb-tiles .fb-card:last-child:nth-child(odd) { grid-column: auto; }
+}
 </style>
 </head>
 <body>
