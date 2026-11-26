@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LINE 客服 AI 回覆內容之人工檢測現狀</title>
+<style>
+:root {
+  --fg: #1f1e1d; --muted: #6b6a68; --panel: #ffffff; --bg: #faf9f5; --line: #e6e3da;
+  --ok: #2f7d4f; --bad: #c2412d; --c0: #3b6fb6; --c1: #d0743c; --grid: #ebe8e0;
+  --radius: 10px; --serif: "Noto Serif TC", "Songti TC", Georgia, serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --fg: #ecebe8; --muted: #a3a19c; --panel: #262624; --bg: #1c1c1a; --line: #3a3936; --ok: #6cc38d; --bad: #f07a63; --c0: #7aa7e8; --c1: #f0a070; --grid: #33322f; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); }
+.fb { max-width: 1100px; margin: 0 auto; padding: 32px 20px 48px; display: flex; flex-direction: column; gap: 32px; }
+.fb h1 { font-family: var(--serif); font-weight: 400; font-size: 28px; margin: 0; }
+.fb h2 { font-size: 18px; font-weight: 600; margin: 0 0 12px; }
+.fb-sub { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+.fb-lead { margin: 24px 0 0; max-width: 60em; display: flex; flex-direction: column; gap: 24px; }
+.fb-lead h3 { font-size: 15px; font-weight: 600; margin: 0 0 6px; }
+.fb-lead p { font-size: 15px; line-height: 1.7; margin: 0; }
+.fb-lead p + p { margin-top: 6px; }
+.fb-callout { border: 2px solid var(--bad); border-left-width: 6px; background: color-mix(in srgb, var(--bad) 10%, transparent); border-radius: var(--radius); padding: 20px; }
+.fb-callout h3 { color: var(--bad); font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+.fb-callout p { font-size: 17px; line-height: 1.6; }
+.fb-callout strong { color: var(--bad); font-weight: 700; }
+.fb-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; }
+.fb-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+.fb-tile-label { font-size: 13px; color: var(--muted); }
+.fb-tile-num { font-family: var(--serif); font-size: 28px; font-variant-numeric: tabular-nums; margin-top: 4px; }
+.fb-tile-note { font-size: 13px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.fb-good { color: var(--ok); } .fb-bad { color: var(--bad); }
+.fb-chart { position: relative; min-height: 260px; }
+.fb-chart svg { display: block; width: 100%; }
+.fb-chart text { fill: var(--muted); font-size: 12px; font-family: var(--sans); }
+.fb-tip { position: absolute; top: 0; pointer-events: none; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 4px 14px rgba(0,0,0,.12); border-radius: 8px; padding: 6px 10px; font-size: 13px; white-space: nowrap; }
+.fb-legend { display: flex; gap: 16px; font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.fb-sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+.fb-note { font-size: 13px; color: var(--muted); margin: 10px 0 0; line-height: 1.6; }
+.fb-tablewrap { overflow-x: auto; }
+.fb table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+.fb th, .fb td { text-align: left; padding: 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.fb th { font-weight: 600; color: var(--muted); font-size: 13px; }
+.fb .num { text-align: right; }
+.fb-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+.fb-bars { display: flex; flex-direction: column; gap: 10px; }
+.fb-barrow { display: grid; grid-template-columns: minmax(0, 1fr) 2.5em; gap: 10px; align-items: center; font-size: 14px; }
+.fb-bartrack { height: 8px; background: var(--line); border-radius: 4px; margin-top: 4px; }
+.fb-barfill { height: 8px; border-radius: 4px; }
+.fb-barval { text-align: right; font-variant-numeric: tabular-nums; }
+.fb-findings { margin: 0; padding-left: 1.2em; line-height: 1.7; }
+.fb-findings li + li { margin-top: 10px; }
+.fb-sugg { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.fb-s-head { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); }
+.fb-s-q { margin: 10px 0 0; font-weight: 600; }
+.fb-s-tag { display: inline-block; margin: 10px 4px 0 0; font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.fb-s-tag.wrong { color: var(--bad); border-color: var(--bad); }
+.fb-s-sugg { margin: 10px 0 0; line-height: 1.6; }
+.fb-s-sugg::before { content: "建議："; color: var(--muted); }
+.fb details { margin-top: 10px; font-size: 13px; color: var(--muted); }
+.fb details summary { cursor: pointer; }
+.fb details p { white-space: pre-wrap; margin: 6px 0 0; line-height: 1.6; }
+.fb-foot ul { margin: 8px 0 0; padding-left: 1.2em; line-height: 1.7; font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="fb">
+  <header>
+    <h1>LINE 客服 AI 回覆內容之人工檢測現狀</h1>
+    <p class="fb-sub">統計期間：2026/11/17（第一筆評價）起至 2026/11/26 10:13 資料匯出時，台灣時間。</p>
+    <div class="fb-lead">
+      <div>
+        <h3>一、目前評核參與度明顯不足</h3>
+        <p>自功能上線以來，僅有 2 位總公司同仁（Byron、大宇）針對 AI 回覆內容進行評核，其中大宇的 1 則回饋為功能測試，實際提供內容評核意見的僅有 Byron，且其評核內容主要集中於自身業務相關範疇。</p>
+        <p>因此，目前的測試廣度及樣本數明顯不足，尚無法全面評估 AI 客服的回覆品質。</p>
+      </div>
+      <div>
+        <h3>二、缺乏第一線專業人員參與品質檢測</h3>
+        <p>截至目前，尚未有任何第一線護理人員、雷射諮詢員參與 AI 回覆內容的評核。</p>
+        <p>這些同仁最熟悉客戶常見問題、實際服務情境及醫療專業知識，其參與對於 AI 回覆內容的正確性、完整性及適切性至關重要。若缺乏第一線專業人員的檢測與回饋，將難以確認 AI 客服是否真正符合實際服務需求。</p>
+      </div>
+      <div>
+        <h3>三、AI 客服品質需由各專業單位共同把關</h3>
+        <p>數位發展部已完成相關功能開發及回饋機制建置，期望能有更多熟悉第一線業務的同仁主動參與測試，透過模擬客戶提問、檢視 AI 回覆及提供專業修正意見，持續提升 AI 客服的服務品質。</p>
+      </div>
+      <div class="fb-callout" role="note">
+        <h3>⚠️ 特別提醒</h3>
+        <p><strong>希望營運單位廣邀各診所護理人員、諮詢人員多加測試，並踴躍回覆修正建議。</strong></p>
+        <p>程式開發完成，不代表 AI 回覆內容已可正式對客服務。醫療專業及服務內容是否正確，需要第一線同仁實際模擬客人提問、檢視 AI 的回答，並在回覆上按讚／倒讚、寫下建議，<strong>AI 客服才能持續修正，早日達到對客服務的品質。</strong></p>
+      </div>
+    </div>
+  </header>
+
+  <section class="fb-tiles" id="kpis"></section>
+
+  <section class="fb-card">
+    <h2>每天的讚與倒讚</h2>
+    <div class="fb-legend"><span><i class="fb-sw" style="background:var(--c0)"></i>讚</span><span><i class="fb-sw" style="background:var(--c1)"></i>倒讚</span></div>
+    <div class="fb-chart" id="daily-chart"></div>
+    <p class="fb-note">依「AI 回覆發出的日期」分組：資料表只存目前的評價，沒有記錄按讚的時間。沒有回覆的日子不列出。</p>
+  </section>
+
+  <div class="fb-two">
+    <section class="fb-card">
+      <h2>評價者</h2>
+      <div class="fb-tablewrap">
+        <table>
+          <thead><tr><th>評價帳號</th><th class="num">評價</th><th class="num">讚</th><th class="num">倒讚</th><th class="num">聊天室</th></tr></thead>
+          <tbody id="raters-table"></tbody>
+        </table>
+      </div>
+      <p class="fb-note">建議欄位會記錄寫入者的員工編號，這兩個帳號都由員工操作，應該是內部測試帳號。</p>
+    </section>
+    <section class="fb-card">
+      <h2>倒讚的問題類型</h2>
+      <div class="fb-bars" id="problem-bars"></div>
+      <p class="fb-note">一則建議可以勾選多個問題類型，沒勾的記為「未勾選」。</p>
+    </section>
+  </div>
+
+  <section class="fb-card">
+    <h2>從建議看出的待改善項目</h2>
+    <ol class="fb-findings">
+      <li><b>院區對應錯誤</b>：視網膜剝離、3D 輔助視網膜手術都被導到新南診所，同事指正應為忠孝大學。需要修正知識庫中各院區可做的手術項目。</li>
+      <li><b>產品資訊錯誤</b>：AI 回答新南診所沒有販售熱敷眼罩，實際上有賣。</li>
+      <li><b>知識庫缺資料</b>：IVI 注射、自費雷射術後的健保、大學眼科品牌特色、視網膜手術時間（約 1 小時，依病情而定）等問題，AI 都只能回答「沒有資料」或過於籠統。可請衛教、行銷提供資料補進知識庫。</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>所有回覆建議</h2>
+    <div class="fb-sugg" id="sugg-cards"></div>
+  </section>
+
+  <details class="fb-foot">
+    <summary>名詞與計算方式</summary>
+    <ul>
+      <li>回覆：客服人員或 AI 發給客人的訊息，期間內 AI 回覆占絕大多數。</li>
+      <li>評價：客人在回覆泡泡上按讚或倒讚，只存最後的狀態；取消評價後不列入。</li>
+      <li>建議：在回覆上填寫的「問題類型」與「建議」，會記錄寫入者的員工編號。</li>
+      <li>時間：資料庫存 UTC，本頁一律換算為台灣時間（+8 小時）。</li>
+      <li>本頁是 2026/11/26 10:13 一次性匯出的快照，不會自動更新；要看最新數字需要重新匯出。</li>
+    </ul>
+  </details>
+</div>
+
+<script>
+const DATA = {
+  summary: {replies: 354, ai_replies: 351, rated: 61, up: 53, down: 8, suggestions: 8, customers: 16, raters: 2, conversations: 45, rated_conversations: 7},
+  daily: [
+    {date: "2026-11-17", replies: 73, up: 1, down: 0},
+    {date: "2026-11-18", replies: 13, up: 0, down: 0},
+    {date: "2026-11-19", replies: 107, up: 2, down: 4},
+    {date: "2026-11-20", replies: 8, up: 0, down: 0},
+    {date: "2026-11-23", replies: 12, up: 0, down: 0},
+    {date: "2026-11-24", replies: 115, up: 40, down: 3},
+    {date: "2026-11-25", replies: 24, up: 10, down: 1},
+    {date: "2026-11-26", replies: 2, up: 0, down: 0}
+  ],
+  raters: [
+    {profile_id: "測試帳號 A", rated: 60, up: 53, down: 7, conversations: 6},
+    {profile_id: "測試帳號 B", rated: 1, up: 0, down: 1, conversations: 1}
+  ],
+  suggestions: [
+    {time: "2026-11-19 14:38", profile_id: "測試帳號 A", question: "IVI注射", problem: "資訊不足或太籠統", suggestion: "有相關的衛教資料可以補充給AI學習",
+     ai_reply: "關於 IVI 注射（玻璃體內注射）的相關資訊與說明，目前我沒有這方面的資料可提供。\n\n建議您直接聯繫新南診所，由醫護人員為您詳細說明。\n新南診所電話：02-2368-8055，免付費專線：0800-014-789，地址：台北市大安區新生南路三段 54 之 3 號。\n\n如需真人客服協助，請點選下方「真人客服」（或直接輸入「真人客服」）。"},
+    {time: "2026-11-19 14:41", profile_id: "測試帳號 A", question: "大學眼科與其他眼科醫師診所有什麼差別？", problem: "資訊不足或太籠統；其他", suggestion: "建議可以跟行銷拿大學眼科的企業相關的成就來讓AI學習",
+     ai_reply: "關於大學眼科與其他眼科診所的差別，目前我沒有這方面的詳細資料可提供。如果您有眼睛健康或看診相關的問題，歡迎隨時告訴我！\n\n如需真人客服協助，請點選下方「真人客服」（或直接輸入「真人客服」）。"},
+    {time: "2026-11-19 14:44", profile_id: "測試帳號 A", question: "自費近視雷射手術後可以看健保嗎？", problem: "資訊不足或太籠統", suggestion: "有官方回答",
+     ai_reply: "關於自費近視雷射手術後是否可以使用健保，目前我沒有這方面的詳細資料可提供。\n\n如果您有相關的疑問，建議您直接聯繫新南診所，由醫護人員為您詳細說明。\n新南診所電話：02-2368-8055，免付費專線：0800-014-789，地址：台北市大安區新生南路三段 54 之 3 號。\n\n如需真人客服協助，請點選下方「真人客服」（或直接輸入「真人客服」）。"},
+    {time: "2026-11-19 14:48", profile_id: "測試帳號 B", question: "聊天", problem: "其他", suggestion: "測試",
+     ai_reply: "哈哈，好的！如果您隨時有關於眼睛健康、門診時間、掛號或各項療程的問題，都可以再來找我聊聊喔！祝您今天順心！"},
+    {time: "2026-11-24 16:58", profile_id: "測試帳號 A", question: "請問哪裡有做？", problem: "內容有誤（時間、費用、地址、電話、綁定資訊）", suggestion: "忠孝大學才對",
+     ai_reply: "視網膜剝離玻璃體切除手術可以在新南診所進行。建議您前往新南診所，由醫師為您詳細檢查與評估。\n\n新南診所地址：台北市大安區新生南路三段 54 之 3 號\n電話：02-2368-8055\n免付費專線：0800-014-789"},
+    {time: "2026-11-24 17:15", profile_id: "測試帳號 A", question: "哪邊有這個手術", problem: "", suggestion: "忠孝大學",
+     ai_reply: "3D 輔助視網膜手術可以在新南診所進行。建議您前往新南診所，由醫師為您詳細檢查與評估。\n\n新南診所地址：台北市大安區新生南路三段 54 之 3 號\n電話：02-2368-8055\n免付費專線：0800-014-789\n\n如需真人客服協助，請點選下方「真人客服」（或直接輸入「真人客服」）。"},
+    {time: "2026-11-24 17:30", profile_id: "測試帳號 A", question: "視網膜手術要多久時間時", problem: "資訊不足或太籠統", suggestion: "視網膜手術時間大約1小時，還是會是病情影響手術時間",
+     ai_reply: "視網膜手術所需的時間會依個人的眼部病況、手術複雜度與採用的小切口微創等方式而有所不同。詳細的手術時間與流程，建議前往新南診所，由醫師為您詳細檢查與評估。\n\n新南診所地址：台北市大安區新生南路三段 54 之 3 號\n電話：02-2368-8055\n免付費專線：0800-014-789\n\n如果您想預約看診或了解門診資訊，歡迎點選下方按鈕。"},
+    {time: "2026-11-25 08:04", profile_id: "測試帳號 A", question: "你們有賣熱敷眼罩嗎？", problem: "內容有誤（時間、費用、地址、電話、綁定資訊）", suggestion: "有賣",
+     ai_reply: "您好，新南診所目前沒有販售熱敷眼罩喔。若您想了解如何挑選或使用熱敷眼罩，建議溫度約在 40 到 50 度左右，一次熱敷 10 到 15 分鐘左右。如有其他疑問，歡迎隨時聯繫新南診所（電話：02-2368-8055，免付費專線：0800-014-789）。"}
+  ]
+};
+
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
+const S = DATA.summary;
+
+// KPI tiles
+[
+  ['有評價的客人', S.raters, '人', '', `期間內收到回覆的客人共 ${S.customers} 人`],
+  ['有評價的回覆', S.rated, '則', '', `占 ${S.replies} 則回覆的 ${pct(S.rated, S.replies)}`],
+  ['👍 讚', S.up, '則', 'fb-good', `占已評價的 ${pct(S.up, S.rated)}`],
+  ['👎 倒讚', S.down, '則', 'fb-bad', `占已評價的 ${pct(S.down, S.rated)}`],
+  ['回覆建議', S.suggestions, '則', '', `分布在 ${S.rated_conversations} 個有評價的聊天室`]
+].forEach(([label, n, unit, cls, note]) => {
+  const c = el('div', 'fb-card');
+  c.append(el('div', 'fb-tile-label', label), el('div', 'fb-tile-num ' + cls, `${n} ${unit}`), el('div', 'fb-tile-note', note));
+  document.getElementById('kpis').append(c);
+});
+
+// Daily stacked bar chart
+function drawDaily() {
+  const box = document.getElementById('daily-chart');
+  const rows = DATA.daily;
+  const W = box.clientWidth || 600, H = 260, m = {top: 20, right: 8, bottom: 26, left: 32};
+  const NS = 'http://www.w3.org/2000/svg';
+  const mk = (t, a) => { const n = document.createElementNS(NS, t); for (const k in a) n.setAttribute(k, a[k]); return n; };
+  const maxV = Math.max(1, ...rows.map(r => r.up + r.down));
+  const tickStep = Math.max(1, Math.ceil(maxV / 4 / 5) * 5);
+  const yMax = Math.ceil(maxV / tickStep) * tickStep;
+  const y = v => H - m.bottom - v / yMax * (H - m.top - m.bottom);
+  const stepW = (W - m.left - m.right) / rows.length, bw = stepW * 0.7;
+  const svg = mk('svg', {viewBox: `0 0 ${W} ${H}`, height: H, role: 'img', 'aria-label': '每天 AI 回覆收到的讚與倒讚數量，堆疊長條圖'});
+  for (let v = 0; v <= yMax; v += tickStep) {
+    svg.append(mk('line', {x1: m.left, x2: W - m.right, y1: y(v), y2: y(v), stroke: 'var(--grid)'}));
+    const t = mk('text', {x: m.left - 6, y: y(v) + 4, 'text-anchor': 'end'}); t.textContent = v; svg.append(t);
+  }
+  const tip = el('div', 'fb-tip'); tip.hidden = true;
+  rows.forEach((r, i) => {
+    const x0 = m.left + i * stepW, x = x0 + (stepW - bw) / 2;
+    svg.append(mk('rect', {x, width: bw, y: y(r.up), height: y(0) - y(r.up), fill: 'var(--c0)'}));
+    svg.append(mk('rect', {x, width: bw, y: y(r.up + r.down), height: y(r.up) - y(r.up + r.down), fill: 'var(--c1)'}));
+    if (r.up + r.down > 0) { const t = mk('text', {x: x + bw / 2, y: y(r.up + r.down) - 4, 'text-anchor': 'middle'}); t.textContent = r.up + r.down; svg.append(t); }
+    const lab = mk('text', {x: x + bw / 2, y: H - 8, 'text-anchor': 'middle'}); lab.textContent = r.date.slice(5).replace('-', '/'); svg.append(lab);
+    const hit = mk('rect', {x: x0, width: stepW, y: m.top, height: H - m.top - m.bottom, fill: 'transparent'});
+    hit.addEventListener('pointerenter', () => {
+      tip.textContent = `${r.date.slice(5).replace('-', '/')}　讚 ${r.up}・倒讚 ${r.down}・回覆 ${r.replies}`;
+      tip.hidden = false;
+      const tw = tip.offsetWidth, cx = (x + bw / 2) / W * box.clientWidth;
+      tip.style.left = Math.max(0, Math.min(cx - tw / 2, box.clientWidth - tw)) + 'px';
+    });
+    hit.addEventListener('pointerleave', () => { tip.hidden = true; });
+    svg.append(hit);
+  });
+  box.replaceChildren(svg, tip);
+}
+drawDaily();
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(drawDaily, 150); });
+
+// Raters table
+DATA.raters.forEach(r => {
+  const tr = el('tr');
+  [['profile_id'], ['rated', 1], ['up', 1], ['down', 1], ['conversations', 1]].forEach(([f, n]) => tr.append(el('td', n ? 'num' : '', r[f] ?? '—')));
+  document.getElementById('raters-table').append(tr);
+});
+
+// Problem type bars
+const counts = new Map();
+DATA.suggestions.forEach(s => {
+  const parts = (s.problem || '').split('；').map(p => p.trim()).filter(Boolean);
+  (parts.length ? parts : ['未勾選']).forEach(p => counts.set(p, (counts.get(p) || 0) + 1));
+});
+const probs = [...counts].sort((a, b) => b[1] - a[1]);
+const pmax = Math.max(...probs.map(p => p[1]));
+probs.forEach(([name, n]) => {
+  const row = el('div', 'fb-barrow'), left = el('div'), track = el('div', 'fb-bartrack'), fill = el('div', 'fb-barfill');
+  fill.style.width = (n / pmax * 100) + '%';
+  fill.style.background = /有誤/.test(name) ? 'var(--bad)' : 'var(--c0)';
+  track.append(fill); left.append(el('div', '', name), track);
+  row.append(left, el('div', 'fb-barval', n));
+  document.getElementById('problem-bars').append(row);
+});
+
+// Suggestion cards
+DATA.suggestions.forEach(s => {
+  const card = el('article', 'fb-card'), head = el('div', 'fb-s-head');
+  head.append(el('span', '', s.time.slice(5).replace('-', '/')), el('span', '', s.profile_id));
+  card.append(head, el('p', 'fb-s-q', '客人問：' + (s.question || '—')));
+  (s.problem || '').split('；').map(p => p.trim()).filter(Boolean)
+    .forEach(p => card.append(el('span', 'fb-s-tag' + (/有誤/.test(p) ? ' wrong' : ''), p)));
+  card.append(el('p', 'fb-s-sugg', s.suggestion || '—'));
+  const det = el('details'); det.append(el('summary', '', '被倒讚的 AI 回覆'), el('p', '', s.ai_reply || ''));
+  card.append(det);
+  document.getElementById('sugg-cards').append(card);
+});
+</script>
+</body>
+</html>
